@@ -25,7 +25,7 @@ jobs:
           APP_PORT: "8000"
           PLAYWRIGHT_HEADLESS: "1"
           TZ: "Asia/Shanghai"
-          NGROK_AUTH_TOKEN: *** secrets.NGROK_AUTH_TOKEN }}
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
         run: |
           mkdir -p app/data
           python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
