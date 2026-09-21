@@ -19,13 +19,13 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install chromium
           python -m playwright install-deps chromium
-      - run: curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok-v3-stable-linux-amd64.tgz | tar xz -C /usr/local/bin
+      - run: curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | tar xz -C /usr/local/bin
       - env:
           APP_HOST: "0.0.0.0"
           APP_PORT: "8000"
           PLAYWRIGHT_HEADLESS: "1"
           TZ: "Asia/Shanghai"
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+          NGROK_AUTH_TOKEN: *** secrets.NGROK_AUTH_TOKEN }}
         run: |
           mkdir -p app/data
           python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
