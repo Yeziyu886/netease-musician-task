@@ -1,0 +1,49 @@
+name: "首次部署 - 登录账号"
+on:
+  workflow_dispatch:
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: app/data
+          key: netease-data-${{ github.ref_name }}
+          restore-keys: netease-data-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          pip install -r requirements.txt
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+      - run: curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok-v3-stable-linux-amd64.tgz | tar xz -C /usr/local/bin
+      - env:
+          APP_HOST: "0.0.0.0"
+          APP_PORT: "8000"
+          PLAYWRIGHT_HEADLESS: "1"
+          TZ: "Asia/Shanghai"
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        run: |
+          mkdir -p app/data
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+          ngrok config add-authtoken "$NGROK_AUTH_TOKEN"
+          ngrok http 8000 --log=stdout > /tmp/ngrok.log &
+          sleep 5
+          NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | python3 -c "import sys,json;print(json.load(sys.stdin)['tunnels'][0]['public_url'])")
+          echo ""
+          echo "=========================================="
+          echo "🎉 Web 界面地址：$NGROK_URL"
+          echo "=========================================="
+          echo "默认密码: 123456 | 登录后改密码、添加账号"
+          echo "完成后到 Actions 页面 Cancel 此 workflow"
+          echo "=========================================="
+          sleep 3500
+      - if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: app/data
+          key: netease-data-${{ github.ref_name }}
