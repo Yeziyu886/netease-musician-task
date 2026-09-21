@@ -1,0 +1,40 @@
+name: "每日自动执行"
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: app/data
+          key: netease-data-${{ github.ref_name }}
+          restore-keys: netease-data-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          pip install -r requirements.txt
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+      - env:
+          APP_HOST: "0.0.0.0"
+          APP_PORT: "8000"
+          PLAYWRIGHT_HEADLESS: "1"
+          TZ: "Asia/Shanghai"
+        run: |
+          mkdir -p app/data
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 8
+          echo "服务已启动，等待任务执行..."
+          sleep 1200
+          echo "执行完成"
+      - if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: app/data
+          key: netease-data-${{ github.ref_name }}
