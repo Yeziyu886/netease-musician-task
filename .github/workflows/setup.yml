@@ -31,19 +31,40 @@ jobs:
         run: |
           mkdir -p app/data
           python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
+          # 等待 Web 服务就绪（最多 60 秒），避免后续流程在服务未起时空跑
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/login >/dev/null 2>&1 && break
+            sleep 2
+          done
           ngrok config add-authtoken "$NGROK_AUTH_TOKEN"
           ngrok http 8000 --log=stdout > /tmp/ngrok.log &
-          sleep 5
-          NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | python3 -c "import sys,json;print(json.load(sys.stdin)['tunnels'][0]['public_url'])")
+          # 等待 ngrok 隧道建立（最多 60 秒）。原实现直接取 tunnels[0]，
+          # ngrok 尚未就绪时 python 会抛 IndexError 让整个 step 失败。
+          NGROK_URL=""
+          for i in $(seq 1 30); do
+            NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | python3 -c "import sys,json
+          try:
+              tunnels = (json.load(sys.stdin) or {}).get('tunnels') or []
+              print(tunnels[0]['public_url'] if tunnels else '')
+          except Exception:
+              print('')" 2>/dev/null || true)
+            [ -n "$NGROK_URL" ] && break
+            sleep 2
+          done
           echo ""
           echo "=========================================="
-          echo "🎉 Web 界面地址：$NGROK_URL"
+          if [ -n "$NGROK_URL" ]; then
+            echo "🎉 Web 界面地址：$NGROK_URL"
+          else
+            echo "⚠️ 未能自动获取 ngrok 地址，请查看 /tmp/ngrok.log 或 ngrok 后台"
+          fi
           echo "=========================================="
           echo "默认密码: 123456 | 登录后改密码、添加账号"
           echo "完成后到 Actions 页面 Cancel 此 workflow"
           echo "=========================================="
-          sleep 3500
+          # 交互等待时间。前面安装+启动约 5 分钟，这里留 50 分钟，
+          # 总时长控制在 job 的 timeout-minutes(60) 之内，忘记手动 Cancel 也会正常收尾
+          sleep 3000
       - if: always()
         uses: actions/cache/save@v4
         with:
