@@ -3,7 +3,9 @@ on:
   workflow_dispatch:
 jobs:
   setup:
-    runs-on: ubuntu-latest
+    # 同 daily.yml：固定 LTS runner，避免 ubuntu-latest 升级到 Playwright 不支持的
+    # 新发行版时首次部署直接失败
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4

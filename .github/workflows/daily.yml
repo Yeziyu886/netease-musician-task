@@ -5,7 +5,11 @@ on:
   workflow_dispatch:
 jobs:
   run:
-    runs-on: ubuntu-latest
+    # 固定 ubuntu-24.04 而不是 ubuntu-latest：ubuntu-latest 已于 2026-10 切换到
+    # Ubuntu 26.04，旧版 Playwright（<1.60）会直接报
+    # "Playwright does not support chromium on ubuntu26.04-x64" 导致任务中断。
+    # 定时任务依赖浏览器自动化，固定 LTS runner 保证可复现。
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
